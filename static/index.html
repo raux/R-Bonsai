@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R-Bonsai | L-System Animator</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="page">
+    <section class="panel">
+      <header class="hero">
+        <p class="eyebrow">R-Bonsai Studio</p>
+        <h1>Procedural L-System Animator</h1>
+        <p class="subtitle">Generate classic fractals, tweak rules, and watch the canvas grow stroke by stroke.</p>
+      </header>
+
+      <form id="configForm" class="form">
+        <div class="field">
+          <label for="modeSelect">Mode</label>
+          <select id="modeSelect">
+            <option value="0">Classic Bonsai</option>
+            <option value="1">Koch Snowflake</option>
+          </select>
+        </div>
+
+        <div class="split">
+          <div class="field">
+            <label for="iterations">Iterations</label>
+            <input id="iterations" type="number" min="0" max="8" value="4">
+          </div>
+          <div class="field">
+            <label for="angle">Angle (°)</label>
+            <input id="angle" type="number" min="0" max="180" step="0.1" value="25">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="axiom">Axiom</label>
+          <input id="axiom" type="text" value="X">
+        </div>
+
+        <div class="field">
+          <label for="rules">Rules (JSON object)</label>
+          <textarea id="rules" rows="4" spellcheck="false">{ "X": "F+[[X]-X]-F[-FX]+X", "F": "FF" }</textarea>
+        </div>
+
+        <button type="submit">Generate &amp; Animate</button>
+      </form>
+
+      <div class="result">
+        <div class="status" id="status">Ready to generate.</div>
+        <pre id="lsysOutput" class="output" aria-live="polite"></pre>
+      </div>
+    </section>
+
+    <section class="canvas-panel">
+      <div class="canvas-header">
+        <div>
+          <p class="eyebrow">Canvas</p>
+          <h2>Live Turtle Graphics</h2>
+        </div>
+        <div class="legend">
+          <span class="chip">F: draw</span>
+          <span class="chip">+ : turn left</span>
+          <span class="chip">- : turn right</span>
+          <span class="chip">[ : push</span>
+          <span class="chip">] : pop</span>
+        </div>
+      </div>
+      <canvas id="bonsaiCanvas" width="960" height="720"></canvas>
+    </section>
+  </div>
+
+  <script type="module" src="/static/main.js"></script>
+</body>
+</html>

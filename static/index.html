@@ -1,346 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>R-Bonsai — L-System Animator</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: #0d1117;
-      color: #e6edf3;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    /* ── Header ── */
-    header {
-      padding: 10px 20px;
-      background: #161b22;
-      border-bottom: 1px solid #30363d;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    header h1 { font-size: 1.3rem; color: #58a6ff; letter-spacing: 0.02em; }
-    header span { font-size: 0.85rem; color: #8b949e; }
-
-    /* ── Canvas ── */
-    #canvas-wrap {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      background: #0a1628;
-    }
-    canvas { display: block; width: 100%; height: 100%; }
-
-    /* ── Controls ── */
-    #controls {
-      padding: 10px 20px;
-      background: #161b22;
-      border-top: 1px solid #30363d;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .ctrl-label {
-      font-size: 0.82rem;
-      color: #8b949e;
-      white-space: nowrap;
-    }
-
-    button {
-      padding: 6px 14px;
-      border-radius: 6px;
-      border: 1px solid #30363d;
-      background: #21262d;
-      color: #e6edf3;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-    }
-    button:hover:not(:disabled) { background: #30363d; border-color: #58a6ff; }
-    button:disabled { opacity: 0.5; cursor: default; }
-    button.mode-active {
-      background: rgba(56, 139, 253, 0.15);
-      border-color: #58a6ff;
-      color: #58a6ff;
-    }
-
-    input[type="number"] {
-      width: 72px;
-      padding: 5px 8px;
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #e6edf3;
-      font-size: 0.85rem;
-    }
-    input[type="number"]:focus {
-      outline: none;
-      border-color: #58a6ff;
-    }
-
-    #status {
-      margin-left: auto;
-      font-size: 0.8rem;
-      color: #8b949e;
-      white-space: nowrap;
-    }
-
-    #divider { width: 1px; height: 22px; background: #30363d; }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R-Bonsai | L-System Animator</title>
+  <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+  <div class="page">
+    <section class="panel">
+      <header class="hero">
+        <p class="eyebrow">R-Bonsai Studio</p>
+        <h1>Procedural L-System Animator</h1>
+        <p class="subtitle">Generate classic fractals, tweak rules, and watch the canvas grow stroke by stroke.</p>
+      </header>
 
-<header>
-  <h1>🌳 R-Bonsai</h1>
-  <span>L-System Animator</span>
-</header>
+      <form id="configForm" class="form">
+        <div class="field">
+          <label for="modeSelect">Mode</label>
+          <select id="modeSelect">
+            <option value="0">Classic Bonsai</option>
+            <option value="1">Koch Snowflake</option>
+          </select>
+        </div>
 
-<div id="canvas-wrap">
-  <canvas id="canvas"></canvas>
-</div>
+        <div class="split">
+          <div class="field">
+            <label for="iterations">Iterations</label>
+            <input id="iterations" type="number" min="0" max="8" value="4">
+          </div>
+          <div class="field">
+            <label for="angle">Angle (°)</label>
+            <input id="angle" type="number" min="0" max="180" step="0.1" value="25">
+          </div>
+        </div>
 
-<div id="controls">
-  <span class="ctrl-label">Mode:</span>
-  <button id="btn-mode0" class="mode-active" onclick="selectMode(0)">🌿 Classic Bonsai</button>
-  <button id="btn-mode1" onclick="selectMode(1)">❄️ Koch Snowflake</button>
-  <div id="divider"></div>
-  <span class="ctrl-label">Iterations:</span>
-  <input type="number" id="iter-input" value="5" min="1" max="10" />
-  <button id="btn-gen" onclick="runGenerate()">▶ Generate</button>
-  <span id="status">Loading…</span>
-</div>
+        <div class="field">
+          <label for="axiom">Axiom</label>
+          <input id="axiom" type="text" value="X">
+        </div>
 
-<script>
-/* ── Mode Configurations ────────────────────────────────────────── */
-const MODES = {
-  0: {
-    name: 'Classic Bonsai',
-    defaultIterations: 5,
-    axiom: 'X',
-    rules: { 'X': 'F+[[X]-X]-F[-FX]+X', 'F': 'FF' },
-    angle: 25,
-    initialAngle: -90,
-    lineColor: function (depth) {
-      const palette = ['#6b3d1e', '#8b5e2e', '#5d7a32', '#4a9e3a', '#76c442', '#a8e063'];
-      return palette[Math.min(depth, palette.length - 1)];
-    },
-    lineWidth: function (depth) { return Math.max(0.5, 2.5 - depth * 0.4); }
-  },
-  1: {
-    name: 'Koch Snowflake',
-    defaultIterations: 4,
-    axiom: 'F++F++F',
-    rules: { 'F': 'F-F++F-F' },
-    angle: 60,
-    initialAngle: 0,
-    lineColor: function () { return '#67c5f5'; },
-    lineWidth: function () { return 1; }
-  }
-};
+        <div class="field">
+          <label for="rules">Rules (JSON object)</label>
+          <textarea id="rules" rows="4" spellcheck="false">{ "X": "F+[[X]-X]-F[-FX]+X", "F": "FF" }</textarea>
+        </div>
 
-/* ── State ──────────────────────────────────────────────────────── */
-let currentMode = 0;
-let animationId  = null;
+        <button type="submit">Generate &amp; Animate</button>
+      </form>
 
-const canvas    = document.getElementById('canvas');
-const ctx       = canvas.getContext('2d');
-const statusEl  = document.getElementById('status');
+      <div class="result">
+        <div class="status" id="status">Ready to generate.</div>
+        <pre id="lsysOutput" class="output" aria-live="polite"></pre>
+      </div>
+    </section>
 
-/* ── Canvas Sizing ──────────────────────────────────────────────── */
-function resizeCanvas() {
-  const wrap   = document.getElementById('canvas-wrap');
-  canvas.width  = wrap.clientWidth;
-  canvas.height = wrap.clientHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+    <section class="canvas-panel">
+      <div class="canvas-header">
+        <div>
+          <p class="eyebrow">Canvas</p>
+          <h2>Live Turtle Graphics</h2>
+        </div>
+        <div class="legend">
+          <span class="chip">F: draw</span>
+          <span class="chip">+ : turn left</span>
+          <span class="chip">- : turn right</span>
+          <span class="chip">[ : push</span>
+          <span class="chip">] : pop</span>
+        </div>
+      </div>
+      <canvas id="bonsaiCanvas" width="960" height="720"></canvas>
+    </section>
+  </div>
 
-/* ── Mode Selection ─────────────────────────────────────────────── */
-function selectMode(mode) {
-  if (!(mode in MODES)) { return; }
-  currentMode = mode;
-  document.querySelectorAll('[id^="btn-mode"]').forEach(function (b) {
-    b.classList.remove('mode-active');
-  });
-  document.getElementById('btn-mode' + mode).classList.add('mode-active');
-  document.getElementById('iter-input').value = MODES[mode].defaultIterations;
-}
-
-/* ── Bounds Computation (dry-run, no drawing) ───────────────────── */
-function computeBounds(lstring, mode) {
-  var x = 0, y = 0;
-  var angle   = mode.initialAngle * Math.PI / 180;
-  var turnRad = mode.angle        * Math.PI / 180;
-  var minX = 0, maxX = 0, minY = 0, maxY = 0;
-  var stack = [];
-
-  for (var i = 0; i < lstring.length; i++) {
-    switch (lstring[i]) {
-      case 'F':
-        x += Math.cos(angle);
-        y += Math.sin(angle);
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        break;
-      case '+': angle -= turnRad; break;
-      case '-': angle += turnRad; break;
-      case '[': stack.push({ x: x, y: y, angle: angle }); break;
-      case ']':
-        if (stack.length > 0) {
-          var s = stack.pop();
-          x = s.x; y = s.y; angle = s.angle;
-        }
-        break;
-    }
-  }
-  return { minX: minX, maxX: maxX, minY: minY, maxY: maxY };
-}
-
-/* ── Animation ──────────────────────────────────────────────────── */
-function animate(lstring, mode) {
-  if (animationId !== null) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-
-  var bounds  = computeBounds(lstring, mode);
-  var w       = canvas.width;
-  var h       = canvas.height;
-  var padding = 40;
-
-  var boundsW = bounds.maxX - bounds.minX || 1;
-  var boundsH = bounds.maxY - bounds.minY || 1;
-
-  var scale = Math.min(
-    (w - 2 * padding) / boundsW,
-    (h - 2 * padding) / boundsH
-  );
-
-  var offsetX = padding + (w - 2 * padding - boundsW * scale) / 2 - bounds.minX * scale;
-  var offsetY = padding + (h - 2 * padding - boundsH * scale) / 2 - bounds.minY * scale;
-
-  /* turtle state */
-  var x       = 0, y = 0;
-  var angle   = mode.initialAngle * Math.PI / 180;
-  var turnRad = mode.angle        * Math.PI / 180;
-  var stack   = [];
-  var depth   = 0;
-  var idx     = 0;
-
-  /* Draw ~300 "frames" for a smooth ~5 second animation at 60 fps */
-  var batchSize = Math.max(1, Math.floor(lstring.length / 300));
-
-  /* Draw background */
-  ctx.fillStyle = '#0a1628';
-  ctx.fillRect(0, 0, w, h);
-
-  function drawFrame() {
-    var end = Math.min(idx + batchSize, lstring.length);
-
-    for (var i = idx; i < end; i++) {
-      switch (lstring[i]) {
-        case 'F': {
-          var nx = x + Math.cos(angle);
-          var ny = y + Math.sin(angle);
-          ctx.beginPath();
-          ctx.strokeStyle = mode.lineColor(depth);
-          ctx.lineWidth   = mode.lineWidth(depth);
-          ctx.moveTo(x * scale + offsetX, y * scale + offsetY);
-          ctx.lineTo(nx * scale + offsetX, ny * scale + offsetY);
-          ctx.stroke();
-          x = nx; y = ny;
-          break;
-        }
-        case '+': angle -= turnRad; break;
-        case '-': angle += turnRad; break;
-        case '[':
-          stack.push({ x: x, y: y, angle: angle, depth: depth });
-          depth++;
-          break;
-        case ']':
-          if (stack.length > 0) {
-            var s = stack.pop();
-            x = s.x; y = s.y; angle = s.angle; depth = s.depth;
-          }
-          break;
-      }
-    }
-
-    idx = end;
-    if (idx < lstring.length) {
-      animationId = requestAnimationFrame(drawFrame);
-    } else {
-      animationId = null;
-      statusEl.textContent =
-        'Complete — ' + lstring.length.toLocaleString() + ' chars';
-    }
-  }
-
-  animationId = requestAnimationFrame(drawFrame);
-}
-
-/* ── Generate ───────────────────────────────────────────────────── */
-async function runGenerate() {
-  var iterations = parseInt(document.getElementById('iter-input').value, 10);
-  if (isNaN(iterations) || iterations < 1 || iterations > 10) {
-    statusEl.textContent = 'Error: iterations must be between 1 and 10';
-    return;
-  }
-  var mode       = MODES[currentMode];
-
-  if (animationId !== null) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-
-  statusEl.textContent = 'Generating…';
-  document.getElementById('btn-gen').disabled = true;
-
-  try {
-    var response = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        iterations: iterations,
-        axiom: mode.axiom,
-        rules: mode.rules
-      })
-    });
-
-    if (!response.ok) {
-      var err = await response.json();
-      throw new Error(err.detail || ('HTTP ' + response.status));
-    }
-
-    var data    = await response.json();
-    var lstring = data.result;
-
-    statusEl.textContent = 'Animating — ' + lstring.length.toLocaleString() + ' chars…';
-    animate(lstring, mode);
-
-  } catch (e) {
-    statusEl.textContent = 'Error: ' + e.message;
-    ctx.fillStyle = '#0a1628';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  } finally {
-    document.getElementById('btn-gen').disabled = false;
-  }
-}
-
-/* ── Initialise ─────────────────────────────────────────────────── */
-selectMode(0);
-runGenerate();
-</script>
+  <script type="module" src="/static/main.js"></script>
 </body>
 </html>

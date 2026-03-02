@@ -29,6 +29,18 @@ const ctx = canvas.getContext("2d");
 let displayWidth = canvas.clientWidth || canvas.width;
 let displayHeight = canvas.clientHeight || canvas.height;
 
+function generateLSystem(axiom, rules, iterations) {
+  let current = axiom;
+  for (let i = 0; i < iterations; i += 1) {
+    let next = "";
+    for (const symbol of current) {
+      next += rules[symbol] ?? symbol;
+    }
+    current = next;
+  }
+  return current;
+}
+
 function resizeCanvas() {
   const ratio = window.devicePixelRatio || 1;
   displayWidth = canvas.clientWidth || canvas.width;
@@ -54,23 +66,30 @@ function populateFromMode(modeId) {
 }
 
 async function generateSequence(payload) {
-  const response = await fetch("/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  if (!Number.isInteger(payload.iterations) || payload.iterations < 0 || payload.iterations > 10) {
+    throw new Error("Iterations must be between 0 and 10.");
+  }
+  const rules = payload.rules;
+  if (!rules || typeof rules !== "object" || Object.keys(rules).length === 0) {
+    throw new Error("Rules must not be empty.");
+  }
+  const axiom = payload.axiom.trim();
+  if (!axiom) {
+    throw new Error("Axiom is required.");
+  }
 
-  let data = null;
-  try {
-    data = await response.json();
-  } catch {
-    data = null;
-  }
-  if (!response.ok) {
-    const detail = data?.detail || "Generation failed";
-    throw new Error(detail);
-  }
-  return data;
+  const angle = Number.isFinite(payload.angle) ? payload.angle : MODES[payload.mode]?.angle ?? 25;
+
+  const result = generateLSystem(axiom, rules, payload.iterations);
+
+  return {
+    result,
+    iterations: payload.iterations,
+    axiom,
+    rules,
+    angle,
+    mode: payload.mode,
+  };
 }
 
 function calculateStep(length, iterations, modeId) {
